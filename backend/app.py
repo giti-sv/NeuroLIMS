@@ -1,3 +1,6 @@
+from fastapi import FastAPI, Query, HTTPException, Depends
+from sqlalchemy.orm import Session
+from database import SessionLocal, init_db, User, Experiment
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,8 +20,61 @@ app.add_middleware(
 
 OPENALEX_BASE = "https://api.openalex.org/works"
 MAILTO = os.getenv("OPENALEX_MAILTO", "neurolims@demo.edu")
+init_db()
 
 
+def seed_demo_user():
+    db = SessionLocal()
+    try:
+        existing = db.query(User).filter(User.email == "demo@neurolims.edu").first()
+        if not existing:
+            demo = User(
+                name="Guest",
+                email="demo@neurolims.edu",
+                password="demo1234",
+            )
+            db.add(demo)
+            db.commit()
+    finally:
+        db.close()
+
+
+seed_demo_user()
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+class StimulusInput(BaseModel):
+    type: str
+    amplitude: float
+    pulseWidth: float
+    pulseFreq: float
+
+class NeuroInput(BaseModel):
+    gaba: float
+    glu: float
+
+class SimulationMetrics(BaseModel):
+    totalSpikes: int
+    firingRateHz: float
+    meanVm: float
+    peakVm: float    
+           
+class SaveExperimentRequest(BaseModel):
+    name: str
+    user_email: str
+    tau: float
+    Vth: float
+    tSim: float
+    stim: StimulusInput
+    neuro: NeuroInput
+    metrics: SimulationMetrics
+    
+    
 class AuthRequest(BaseModel):
     email: str
     password: str
@@ -166,31 +222,102 @@ def health() -> Dict[str, str]:
 
 
 @app.post("/auth/login", response_model=UserResponse)
-def login(payload: AuthRequest) -> Dict[str, str]:
-    for user in USERS:
-        if user["email"].lower() == payload.email.lower() and user["password"] == payload.password:
-            return {"name": user["name"], "email": user["email"]}
-    raise HTTPException(status_code=401, detail="Invalid email or password")
+def login(payload: AuthRequest, db: Session = Depends(get_db)) -> Dict[str, str]:
+    user = (
+        db.query(User)
+        .filter(User.email == payload.email.lower(), User.password == payload.password)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    return {"name": user.name, "email": user.email}
 
 
 @app.post("/auth/register", response_model=UserResponse)
-def register(payload: RegisterRequest) -> Dict[str, str]:
-    if any(u["email"].lower() == payload.email.lower() for u in USERS):
+def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> Dict[str, str]:
+    existing = db.query(User).filter(User.email == payload.email.lower()).first()
+    if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    new_user = {
-        "name": payload.name,
-        "email": payload.email,
-        "password": payload.password,
-    }
-    USERS.append(new_user)
-    return {"name": new_user["name"], "email": new_user["email"]}
+    new_user = User(
+        name=payload.name,
+        email=payload.email.lower(),
+        password=payload.password,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {"name": new_user.name, "email": new_user.email}
 
 
 @app.post("/simulate", response_model=SimulationResult)
 def simulate(payload: SimulationInput) -> Dict[str, Any]:
     return lif_simulation(payload)
 
+@app.post("/experiments")
+def save_experiment(payload: SaveExperimentRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.user_email.lower()).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    exp = Experiment(
+        name=payload.name,
+        user_email=payload.user_email.lower(),
+        tau=payload.tau,
+        vth=payload.Vth,
+        tsim=payload.tSim,
+        stim_type=payload.stim.type,
+        amplitude=payload.stim.amplitude,
+        pulse_width=payload.stim.pulseWidth,
+        pulse_freq=payload.stim.pulseFreq,
+        gaba=payload.neuro.gaba,
+        glu=payload.neuro.glu,
+        total_spikes=payload.metrics.totalSpikes,
+        firing_rate_hz=payload.metrics.firingRateHz,
+        mean_vm=payload.metrics.meanVm,
+        peak_vm=payload.metrics.peakVm,
+    )
+
+    db.add(exp)
+    db.commit()
+    db.refresh(exp)
+
+    return {"message": "Experiment saved", "id": exp.id}
+
+
+@app.get("/experiments")
+def get_experiments(user_email: str, db: Session = Depends(get_db)):
+    experiments = (
+        db.query(Experiment)
+        .filter(Experiment.user_email == user_email.lower())
+        .order_by(Experiment.id.desc())
+        .all()
+    )
+
+    return [
+        {
+            "id": e.id,
+            "name": e.name,
+            "user_email": e.user_email,
+            "tau": e.tau,
+            "Vth": e.vth,
+            "tSim": e.tsim,
+            "stim_type": e.stim_type,
+            "amplitude": e.amplitude,
+            "pulse_width": e.pulse_width,
+            "pulse_freq": e.pulse_freq,
+            "gaba": e.gaba,
+            "glu": e.glu,
+            "total_spikes": e.total_spikes,
+            "firing_rate_hz": e.firing_rate_hz,
+            "mean_vm": e.mean_vm,
+            "peak_vm": e.peak_vm,
+        }
+        for e in experiments
+    ]
 
 @app.get("/research/papers")
 async def research_papers(
