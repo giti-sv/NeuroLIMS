@@ -69,3 +69,4 @@ backend/venv/
 
 # Mac
 .DS_Store
+backend/neurolims.db
