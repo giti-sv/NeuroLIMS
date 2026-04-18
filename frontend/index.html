@@ -2731,6 +2731,30 @@
       const voltageCanvasRef = useRef(null);
       const rasterCanvasRef = useRef(null);
 
+      const totalSpikes =
+        result?.metrics?.totalSpikes ??
+        result?.totalSpikes ??
+        result?.result?.metrics?.totalSpikes ??
+        0;
+
+      const firingRateHz =
+        result?.metrics?.firingRateHz ??
+        result?.firingRateHz ??
+        result?.result?.metrics?.firingRateHz ??
+        0;
+
+      const peakVm =
+        result?.metrics?.peakVm ??
+        result?.peakVm ??
+        result?.result?.metrics?.peakVm ??
+        0;
+
+      const meanVm =
+        result?.metrics?.meanVm ??
+        result?.meanVm ??
+        result?.result?.metrics?.meanVm ??
+        0;
+
       // Redraw voltage chart whenever result changes
       useEffect(() => {
         if (!result || !voltageCanvasRef.current) return;
@@ -2776,8 +2800,9 @@
           if (!res.ok) {
             throw new Error("Simulation failed");
           }
-
           const r = await res.json();
+          console.log("SIM RESULT:", r);
+          console.log("SIM METRICS:", r.metrics);
           setResult(r);
         } catch (err) {
           console.error(err);
@@ -3126,22 +3151,34 @@
               {[
                 {
                   label: "Total Spikes",
-                  val: result?.metrics.totalSpikes ?? "—",
+                  val:
+                    result?.metrics?.totalSpikes ??
+                    result?.result?.metrics?.totalSpikes ??
+                    "—",
                   unit: "count",
                 },
                 {
                   label: "Avg Firing Rate",
-                  val: result?.metrics.avgFiringRate ?? "—",
+                  val:
+                    result?.metrics?.firingRateHz ??
+                    result?.result?.metrics?.firingRateHz ??
+                    "—",
                   unit: "Hz",
                 },
                 {
                   label: "Peak Voltage",
-                  val: result?.metrics.peakVoltage ?? "—",
+                  val:
+                    result?.metrics?.peakVm ??
+                    result?.result?.metrics?.peakVm ??
+                    "—",
                   unit: "mV",
                 },
                 {
                   label: "Mean Voltage",
-                  val: result?.metrics.meanVoltage ?? "—",
+                  val:
+                    result?.metrics?.meanVm ??
+                    result?.result?.metrics?.meanVm ??
+                    "—",
                   unit: "mV",
                 },
               ].map((m) => (
@@ -3226,13 +3263,14 @@
                       <div className="exp-info">
                         <div className="exp-name">{exp.name}</div>
                         <div className="exp-meta">
-                          {exp.params.stimType} · I=
-                          {exp.params.amplitude.toFixed(1)}µA · τ={exp.params.tau}ms
-                          · Vth={exp.params.Vth}mV
-                          {exp.params.gabaMod > 0 &&
-                            ` · GABA ${(exp.params.gabaMod * 100).toFixed(0)}%`}
-                          {exp.params.gluMod > 0 &&
-                            ` · Glu ${(exp.params.gluMod * 100).toFixed(0)}%`}
+                          {(exp.stim?.type ?? exp.params?.stimType ?? "constant")} · I=
+                          {Number(exp.stim?.amplitude ?? exp.params?.amplitude ?? 0).toFixed(1)}µA ·
+                          τ={exp.tau ?? exp.params?.tau ?? 0}ms ·
+                          Vth={exp.Vth ?? exp.params?.Vth ?? 0}mV
+                          {(exp.neuro?.gaba ?? exp.params?.gabaMod ?? 0) > 0 &&
+                            ` · GABA ${((exp.neuro?.gaba ?? exp.params?.gabaMod ?? 0) * 100).toFixed(0)}%`}
+                          {(exp.neuro?.glu ?? exp.params?.gluMod ?? 0) > 0 &&
+                            ` · Glu ${((exp.neuro?.glu ?? exp.params?.gluMod ?? 0) * 100).toFixed(0)}%`}
                         </div>
                         {selExp === exp.id && (
                           <div
@@ -3244,18 +3282,21 @@
                             }}
                           >
                             {[
-                              { l: "Spikes", v: exp.result.metrics.totalSpikes },
+                              {
+                                l: "Spikes",
+                                v: exp.metrics?.totalSpikes ?? exp.result?.metrics?.totalSpikes ?? 0,
+                              },
                               {
                                 l: "Rate",
-                                v: exp.result.metrics.avgFiringRate + " Hz",
+                                v: `${exp.metrics?.firingRateHz ?? exp.result?.metrics?.firingRateHz ?? exp.result?.metrics?.avgFiringRate ?? "—"} Hz`,
                               },
                               {
                                 l: "Peak V",
-                                v: exp.result.metrics.peakVoltage + " mV",
+                                v: `${exp.metrics?.peakVm ?? exp.result?.metrics?.peakVm ?? exp.result?.metrics?.peakVoltage ?? "—"} mV`,
                               },
                               {
                                 l: "Mean V",
-                                v: exp.result.metrics.meanVoltage + " mV",
+                                v: `${exp.metrics?.meanVm ?? exp.result?.metrics?.meanVm ?? exp.result?.metrics?.meanVoltage ?? "—"} mV`,
                               },
                             ].map((m) => (
                               <div
@@ -3293,7 +3334,7 @@
                         )}
                       </div>
                       <div className="exp-spikes">
-                        {exp.result.metrics.totalSpikes} spikes
+                        {exp.metrics?.totalSpikes ?? exp.result?.metrics?.totalSpikes ?? 0} spikes
                       </div>
                     </div>
                   ))}

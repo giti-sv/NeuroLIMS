@@ -257,37 +257,6 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> Dict[st
 def simulate(payload: SimulationInput) -> Dict[str, Any]:
     return lif_simulation(payload)
 
-@app.post("/experiments")
-def save_experiment(payload: SaveExperimentRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.user_email.lower()).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    exp = Experiment(
-        name=payload.name,
-        user_email=payload.user_email.lower(),
-        tau=payload.tau,
-        vth=payload.Vth,
-        tsim=payload.tSim,
-        stim_type=payload.stim.type,
-        amplitude=payload.stim.amplitude,
-        pulse_width=payload.stim.pulseWidth,
-        pulse_freq=payload.stim.pulseFreq,
-        gaba=payload.neuro.gaba,
-        glu=payload.neuro.glu,
-        total_spikes=payload.metrics.totalSpikes,
-        firing_rate_hz=payload.metrics.firingRateHz,
-        mean_vm=payload.metrics.meanVm,
-        peak_vm=payload.metrics.peakVm,
-    )
-
-    db.add(exp)
-    db.commit()
-    db.refresh(exp)
-
-    return {"message": "Experiment saved", "id": exp.id}
-
-
 @app.get("/experiments")
 def get_experiments(user_email: str, db: Session = Depends(get_db)):
     experiments = (
@@ -305,16 +274,22 @@ def get_experiments(user_email: str, db: Session = Depends(get_db)):
             "tau": e.tau,
             "Vth": e.vth,
             "tSim": e.tsim,
-            "stim_type": e.stim_type,
-            "amplitude": e.amplitude,
-            "pulse_width": e.pulse_width,
-            "pulse_freq": e.pulse_freq,
-            "gaba": e.gaba,
-            "glu": e.glu,
-            "total_spikes": e.total_spikes,
-            "firing_rate_hz": e.firing_rate_hz,
-            "mean_vm": e.mean_vm,
-            "peak_vm": e.peak_vm,
+            "stim": {
+                "type": e.stim_type,
+                "amplitude": e.amplitude,
+                "pulseWidth": e.pulse_width,
+                "pulseFreq": e.pulse_freq,
+            },
+            "neuro": {
+                "gaba": e.gaba,
+                "glu": e.glu,
+            },
+            "metrics": {
+                "totalSpikes": e.total_spikes,
+                "firingRateHz": e.firing_rate_hz,
+                "meanVm": e.mean_vm,
+                "peakVm": e.peak_vm,
+            },
         }
         for e in experiments
     ]
