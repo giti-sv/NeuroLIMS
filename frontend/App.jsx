@@ -436,6 +436,49 @@ const styles = `
   .raster-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
   .raster-label { font-size: 0.62rem; color: var(--grey-4); font-family: var(--font-mono); width: 28px; text-align: right; flex-shrink: 0; }
   .no-data-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 120px; color: var(--grey-4); font-size: 0.8rem; gap: 8px; }
+
+  /* ── AI CHAT WIDGET ── */
+  .chat-widget { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+  .chat-bubble-btn { width: 52px; height: 52px; border-radius: 50%; background: var(--red); color: white; border: none; cursor: pointer; font-size: 1.3rem; box-shadow: 0 4px 20px rgba(194,17,27,0.4); display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+  .chat-bubble-btn:hover { transform: scale(1.08); background: var(--red-dark); }
+  .chat-panel { width: 360px; height: 500px; background: var(--surface); border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,0.18); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); animation: chatSlideUp 0.22s cubic-bezier(0.22,1,0.36,1); }
+  @keyframes chatSlideUp { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+  .chat-head { background: var(--grey-1); color: white; padding: 14px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .chat-head-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+  .chat-head-info { flex: 1; min-width: 0; }
+  .chat-head-name { font-size: 0.86rem; font-weight: 600; }
+  .chat-head-status { font-size: 0.68rem; color: #a0aec0; margin-top: 1px; }
+  .chat-close-btn { background: none; border: none; color: #a0aec0; cursor: pointer; font-size: 1rem; padding: 4px; line-height: 1; transition: color 0.15s; }
+  .chat-close-btn:hover { color: white; }
+  .chat-msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: #fafafa; }
+  .chat-msg-wrap { display: flex; flex-direction: column; max-width: 88%; }
+  .chat-msg-wrap.user { align-self: flex-end; align-items: flex-end; }
+  .chat-msg-wrap.assistant { align-self: flex-start; align-items: flex-start; }
+  .chat-bubble-msg { padding: 10px 14px; border-radius: 14px; font-size: 0.82rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .chat-msg-wrap.user .chat-bubble-msg { background: var(--red); color: white; border-bottom-right-radius: 4px; }
+  .chat-msg-wrap.assistant .chat-bubble-msg { background: white; color: var(--grey-1); border: 1px solid var(--border); border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .chat-typing-wrap { display: flex; align-items: center; gap: 5px; padding: 10px 14px; background: white; border: 1px solid var(--border); border-radius: 14px; border-bottom-left-radius: 4px; width: fit-content; }
+  .chat-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--grey-4); animation: chatDot 1.2s infinite; }
+  .chat-dot:nth-child(2) { animation-delay: 0.2s; }
+  .chat-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes chatDot { 0%,60%,100% { transform: none; opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
+  .chat-err-row { font-size: 0.76rem; color: var(--red); background: var(--red-light); border: 1px solid var(--red-mid); border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+  .chat-retry-btn { background: none; border: none; color: var(--red); cursor: pointer; font-size: 0.72rem; font-weight: 600; text-decoration: underline; padding: 0; font-family: var(--font-body); flex-shrink: 0; }
+  .chat-foot { padding: 10px 12px; border-top: 1px solid var(--border); background: white; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .chat-textarea { flex: 1; border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 0.82rem; font-family: var(--font-body); color: var(--grey-1); background: var(--bg2); outline: none; transition: border-color 0.15s; resize: none; overflow-y: hidden; line-height: 1.4; }
+  .chat-textarea:focus { border-color: var(--red); background: white; }
+  .chat-send-btn { width: 36px; height: 36px; border-radius: 10px; background: var(--red); border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; }
+  .chat-send-btn:hover:not(:disabled) { background: var(--red-dark); }
+  .chat-send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .chat-welcome { text-align: center; padding: 20px 12px 10px; }
+  .chat-welcome-icon { font-size: 2.2rem; margin-bottom: 8px; }
+  .chat-welcome-title { font-size: 0.88rem; font-weight: 600; color: var(--grey-1); margin-bottom: 5px; }
+  .chat-welcome-sub { font-size: 0.74rem; color: var(--grey-4); line-height: 1.55; }
+  .chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 12px; }
+  .chat-sug-btn { padding: 5px 10px; border-radius: 20px; border: 1.5px solid var(--border); background: white; font-size: 0.72rem; color: var(--grey-3); cursor: pointer; font-family: var(--font-body); transition: all 0.15s; }
+  .chat-sug-btn:hover:not(:disabled) { border-color: var(--red); color: var(--red); background: var(--red-light); }
+  .chat-sug-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .paper-count-label { font-size: 0.72rem; color: var(--grey-4); margin-top: 7px; font-family: var(--font-mono); }
 `;
 
 // ─────────────────────────────────────────────
@@ -1678,6 +1721,144 @@ function PaperCard({ paper, index, onSave }) {
 }
 
 // ─────────────────────────────────────────────
+// DUMMY PAPERS — fallback / demo data (8 papers across 4 years)
+// ─────────────────────────────────────────────
+const DUMMY_PAPERS = [
+  {
+    id: "dp-1",
+    title: "Synaptic Plasticity Mechanisms in Hippocampal CA1 Neurons During Spatial Memory Consolidation",
+    date: "2024-02-14",
+    publication_year: 2024,
+    cited_by_count: 112,
+    authorships: [
+      { author: { display_name: "Elena Vasquez" } },
+      { author: { display_name: "Thomas R. Klein" } },
+      { author: { display_name: "Ji-Young Park" } },
+    ],
+    primary_location: { source: { display_name: "Nature Neuroscience" } },
+    open_access: { is_oa: true },
+    abstract:
+      "We characterised long-term potentiation patterns in CA1 hippocampal neurons using whole-cell patch-clamp combined with two-photon calcium imaging, identifying a novel NMDA-dependent consolidation window.",
+    doi: "https://doi.org/10.1038/nn.2024.014",
+  },
+  {
+    id: "dp-2",
+    title: "Prefrontal Cortex–Amygdala Circuit Dynamics Underlying Fear Extinction in Rodent Models",
+    date: "2024-07-03",
+    publication_year: 2024,
+    cited_by_count: 58,
+    authorships: [
+      { author: { display_name: "Marcus R. Williams" } },
+      { author: { display_name: "Sophie L. Reinholt" } },
+    ],
+    primary_location: { source: { display_name: "Neuron" } },
+    open_access: { is_oa: false },
+    abstract:
+      "Optogenetic silencing of prelimbic-to-basolateral amygdala projections during extinction training impaired fear reduction, implicating a specific circuit node in extinction memory encoding.",
+    doi: "https://doi.org/10.1016/j.neuron.2024.07.003",
+  },
+  {
+    id: "dp-3",
+    title: "Single-Cell RNA Sequencing Reveals Transcriptomic Heterogeneity of Cortical Interneurons",
+    date: "2023-04-19",
+    publication_year: 2023,
+    cited_by_count: 203,
+    authorships: [
+      { author: { display_name: "Anika Brauer" } },
+      { author: { display_name: "Ravi Subramanian" } },
+      { author: { display_name: "Chloe M. Davis" } },
+    ],
+    primary_location: { source: { display_name: "Cell" } },
+    open_access: { is_oa: true },
+    abstract:
+      "Profiling 42,000 single cortical cells across five layers identified 23 interneuron subtypes, including two previously undescribed PV+ populations with distinct axonal projection patterns.",
+    doi: "https://doi.org/10.1016/j.cell.2023.04.019",
+  },
+  {
+    id: "dp-4",
+    title: "GABAergic Inhibition Shapes Oscillatory Dynamics in the Olfactory Cortex",
+    date: "2023-11-08",
+    publication_year: 2023,
+    cited_by_count: 89,
+    authorships: [
+      { author: { display_name: "Hiroshi Tanaka" } },
+      { author: { display_name: "Laura B. Petersen" } },
+    ],
+    primary_location: { source: { display_name: "Journal of Neuroscience" } },
+    open_access: { is_oa: false },
+    abstract:
+      "Pharmacological blockade of GABA-A receptors in piriform cortex abolished gamma-band oscillations (30–80 Hz) and disrupted odour discrimination in freely moving mice.",
+    doi: "https://doi.org/10.1523/jneurosci.2023.089",
+  },
+  {
+    id: "dp-5",
+    title: "Dopaminergic Modulation of Striatal Projection Neurons in Parkinson's Disease Mouse Models",
+    date: "2022-03-22",
+    publication_year: 2022,
+    cited_by_count: 317,
+    authorships: [
+      { author: { display_name: "Samuel O. Okonkwo" } },
+      { author: { display_name: "Mei-Ling Zhang" } },
+      { author: { display_name: "David H. Fitzgerald" } },
+    ],
+    primary_location: { source: { display_name: "Brain" } },
+    open_access: { is_oa: true },
+    abstract:
+      "Selective depletion of nigrostriatal dopamine produced asymmetric D1/D2 imbalance in the direct and indirect striatal pathways, which was partially rescued by L-DOPA priming.",
+    doi: "https://doi.org/10.1093/brain/awac022.032",
+  },
+  {
+    id: "dp-6",
+    title: "Astrocyte Calcium Signalling Regulates Synaptic Transmission at the Tripartite Synapse",
+    date: "2022-09-14",
+    publication_year: 2022,
+    cited_by_count: 141,
+    authorships: [
+      { author: { display_name: "Ingrid F. Holmgren" } },
+      { author: { display_name: "Patrick L. Murphy" } },
+    ],
+    primary_location: { source: { display_name: "Glia" } },
+    open_access: { is_oa: false },
+    abstract:
+      "IP3R2-knockout astrocytes exhibited attenuated calcium transients and reduced gliotransmitter release, leading to impaired short-term synaptic depression in hippocampal slices.",
+    doi: "https://doi.org/10.1002/glia.2022.09.141",
+  },
+  {
+    id: "dp-7",
+    title: "Cerebellar Purkinje Cell Loss Underlies Motor Coordination Deficits in SCA1 Transgenic Mice",
+    date: "2021-06-07",
+    publication_year: 2021,
+    cited_by_count: 276,
+    authorships: [
+      { author: { display_name: "Natasha Ivanova" } },
+      { author: { display_name: "Carlos E. Mendez" } },
+      { author: { display_name: "Grace Y. Lim" } },
+    ],
+    primary_location: { source: { display_name: "eLife" } },
+    open_access: { is_oa: true },
+    abstract:
+      "Progressive loss of Purkinje cell dendritic arbors preceded motor symptom onset by four weeks in SCA1 mice, suggesting a therapeutic window for dendritic rescue strategies.",
+    doi: "https://doi.org/10.7554/elife.2021.06.276",
+  },
+  {
+    id: "dp-8",
+    title: "Adult Hippocampal Neurogenesis Supports Pattern Separation in the Dentate Gyrus",
+    date: "2021-12-01",
+    publication_year: 2021,
+    cited_by_count: 389,
+    authorships: [
+      { author: { display_name: "Oliver J. Barnes" } },
+      { author: { display_name: "Fatima Al-Rashid" } },
+    ],
+    primary_location: { source: { display_name: "Nature" } },
+    open_access: { is_oa: true },
+    abstract:
+      "Ablation of adult-born dentate granule cells selectively impaired discrimination of overlapping spatial contexts without affecting memory for highly distinct environments.",
+    doi: "https://doi.org/10.1038/nature.2021.12.389",
+  },
+];
+
+// ─────────────────────────────────────────────
 // RESEARCH PAGE
 // ─────────────────────────────────────────────
 function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
@@ -1687,9 +1868,9 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
   const [activeKw, setActiveKw] = useState("");
   const [yr, setYr] = useState("all");
   const [tab, setTab] = useState("papers");
-  const [papers, setPapers] = useState([]);
+  const [papers, setPapers] = useState(DUMMY_PAPERS);
   const [studies, setStudies] = useState([]);
-  const [pTotal, setPTotal] = useState(0);
+  const [pTotal, setPTotal] = useState(DUMMY_PAPERS.length);
   const [sTotal, setSTotal] = useState(0);
   const [pPg, setPPg] = useState(1);
   const [sPg, setSPg] = useState(1);
@@ -1697,12 +1878,16 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
   const [sLoad, setSLoad] = useState(false);
   const [pErr, setPErr] = useState(null);
 
-  const ypVal =
-    yr !== "all" && yr !== "custom" ? `,publication_year:${yr}` : "";
-
+  // fetchP accepts an explicit yrParam to avoid stale-closure bugs when the
+  // year filter changes and we call fetchP before React re-renders.
   const fetchP = useCallback(
-    async (k, pg, rid) => {
+    async (k, pg, rid, yrParam) => {
       const r2 = REGIONS[rid || regionId] || REGIONS.frontal;
+      const activeYr = yrParam !== undefined ? yrParam : yr;
+      const ypv =
+        activeYr !== "all" && activeYr !== "custom"
+          ? `,publication_year:${activeYr}`
+          : "";
       setPLoad(true);
       setPErr(null);
       try {
@@ -1710,28 +1895,35 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
         const res = await fetch(
           `https://api.openalex.org/works?search=${encodeURIComponent(
             q
-          )}&per_page=8&page=${pg}&sort=cited_by_count:desc&filter=has_abstract:true${ypVal}&${MAIL}`
+          )}&per_page=8&page=${pg}&sort=cited_by_count:desc&filter=has_abstract:true${ypv}&${MAIL}`
         );
         const d = await res.json();
         setPapers(d.results || []);
         setPTotal(d.meta?.count || 0);
       } catch {
-        setPErr("Could not load papers.");
+        setPErr("Could not load papers. Showing local data.");
+        setPapers(DUMMY_PAPERS);
+        setPTotal(DUMMY_PAPERS.length);
       }
       setPLoad(false);
     },
-    [regionId, ypVal]
+    [regionId, yr]
   );
 
   const fetchS = useCallback(
-    async (pg, rid) => {
+    async (pg, rid, yrParam) => {
       const r2 = REGIONS[rid || regionId] || REGIONS.frontal;
+      const activeYr = yrParam !== undefined ? yrParam : yr;
+      const ypv =
+        activeYr !== "all" && activeYr !== "custom"
+          ? `,publication_year:${activeYr}`
+          : "";
       setSLoad(true);
       try {
         const res = await fetch(
           `https://api.openalex.org/works?search=${encodeURIComponent(
             r2.studyTerms
-          )}&per_page=8&page=${pg}&sort=publication_date:desc&filter=has_abstract:true,type:article${ypVal}&${MAIL}`
+          )}&per_page=8&page=${pg}&sort=publication_date:desc&filter=has_abstract:true,type:article${ypv}&${MAIL}`
         );
         const d = await res.json();
         setStudies(d.results || []);
@@ -1739,7 +1931,7 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
       } catch {}
       setSLoad(false);
     },
-    [regionId, ypVal]
+    [regionId, yr]
   );
 
   useEffect(() => {
@@ -1748,9 +1940,33 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
     setKw("");
     setActiveKw("");
     setYr("all");
-    fetchP("", 1, regionId);
-    fetchS(1, regionId);
+    fetchP("", 1, regionId, "all");
+    fetchS(1, regionId, "all");
   }, [regionId]);
+
+  // Client-side year filter — exact integer match, never mutates source arrays.
+  // Uses publication_year (OpenAlex integer) or parses a date string as fallback.
+  const targetYear = yr !== "all" && yr !== "custom" ? parseInt(yr, 10) : null;
+  const filteredPapers =
+    targetYear === null
+      ? papers
+      : papers.filter((p) => {
+          const y =
+            p.publication_year != null
+              ? p.publication_year
+              : parseInt(p.date?.match(/\d{4}/)?.[0], 10);
+          return y === targetYear;
+        });
+  const filteredStudies =
+    targetYear === null
+      ? studies
+      : studies.filter((p) => {
+          const y =
+            p.publication_year != null
+              ? p.publication_year
+              : parseInt(p.date?.match(/\d{4}/)?.[0], 10);
+          return y === targetYear;
+        });
 
   const doSearch = () => {
     setActiveKw(kw);
@@ -1765,7 +1981,7 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
   };
 
   const isLoad = tab === "papers" ? pLoad : sLoad;
-  const items = tab === "papers" ? papers : studies;
+  const items = tab === "papers" ? filteredPapers : filteredStudies;
   const total = tab === "papers" ? pTotal : sTotal;
   const pg = tab === "papers" ? pPg : sPg;
   const setPg = tab === "papers" ? setPPg : setSPg;
@@ -1948,10 +2164,10 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
                 if (v !== "custom") {
                   setPPg(1);
                   setSPg(1);
-                  setTimeout(() => {
-                    fetchP(activeKw, 1);
-                    fetchS(1);
-                  }, 0);
+                  // Pass v directly so the API call uses the NEW year immediately,
+                  // not the stale yr from the closure before re-render.
+                  fetchP(activeKw, 1, undefined, v);
+                  fetchS(1, undefined, v);
                 }
               }}
             >
@@ -1973,6 +2189,11 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
               ))}
               <option value="custom">Custom year…</option>
             </select>
+            {targetYear !== null && (
+              <div className="paper-count-label">
+                Showing {filteredPapers.length} of {papers.length} papers
+              </div>
+            )}
             {yr === "custom" && (
               <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
                 <input
@@ -1987,10 +2208,8 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
                         setYr(v);
                         setPPg(1);
                         setSPg(1);
-                        setTimeout(() => {
-                          fetchP(activeKw, 1);
-                          fetchS(1);
-                        }, 0);
+                        fetchP(activeKw, 1, undefined, v);
+                        fetchS(1, undefined, v);
                       }
                     }
                   }}
@@ -2007,10 +2226,8 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
                       setYr(v);
                       setPPg(1);
                       setSPg(1);
-                      setTimeout(() => {
-                        fetchP(activeKw, 1);
-                        fetchS(1);
-                      }, 0);
+                      fetchP(activeKw, 1, undefined, v);
+                      fetchS(1, undefined, v);
                     }
                   }}
                 >
@@ -3246,6 +3463,225 @@ function SimPage() {
 }
 
 // ─────────────────────────────────────────────
+// AI CHAT WIDGET
+// ─────────────────────────────────────────────
+const CHAT_SYSTEM = `You are NeuroLIMS Assistant, an AI helper embedded in NeuroLIMS — a Laboratory Information Management System for neuroscience research.
+
+You help lab researchers with:
+- Sample tracking and management (tissue samples, cell cultures, biospecimens, aliquots)
+- Experiment protocols (immunohistochemistry, patch-clamp, fMRI, PCR, Western blot, ELISA)
+- Assay result interpretation (fluorescence intensity, spike rates, binding affinities, IC50)
+- Study management and LIMS workflows (sample intake, chain of custody, data export, audit trails)
+- Brain atlas navigation (cortical regions, hippocampus, cerebellum, basal ganglia, thalamus)
+- Neuroscience terminology (LTP, LTD, GABA, glutamate, synaptic plasticity, neurogenesis, optogenetics)
+- Research paper discovery and citation (interpreting OpenAlex data, DOI lookup, journal evaluation)
+- Data analysis guidance (statistics, normalisation, batch-effect correction, multiple-testing)
+
+Be concise, precise, and helpful. Use correct neuroscience terminology. When discussing protocols give specific steps. Say so when uncertain.`;
+
+const CHAT_SUGGESTIONS = [
+  "What is LTP?",
+  "How do I track a sample?",
+  "Explain patch-clamp",
+  "What's the dentate gyrus?",
+];
+
+function AIChatWidget() {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const msgsEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 80);
+  }, [open]);
+
+  useEffect(() => {
+    msgsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const sendMessage = async (text, retryHistory) => {
+    const userMsg = { role: "user", content: text };
+    const history = retryHistory ?? [...messages, userMsg];
+    if (!retryHistory) {
+      setMessages(history);
+      setInput("");
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: CHAT_SYSTEM,
+          messages: history,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const reply = data.content?.[0]?.text ?? "No response received.";
+      setMessages([...history, { role: "assistant", content: reply }]);
+    } catch {
+      setError("Could not reach the assistant. Check your connection and try again.");
+    }
+    setLoading(false);
+  };
+
+  const handleKey = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (input.trim() && !loading) sendMessage(input.trim());
+    }
+  };
+
+  return (
+    <div className="chat-widget">
+      {open && (
+        <div className="chat-panel">
+          {/* Header */}
+          <div className="chat-head">
+            <div className="chat-head-avatar">🧠</div>
+            <div className="chat-head-info">
+              <div className="chat-head-name">NeuroLIMS Assistant</div>
+              <div className="chat-head-status">
+                {loading ? "Thinking…" : "AI-powered lab assistant"}
+              </div>
+            </div>
+            <button
+              className="chat-close-btn"
+              onClick={() => setOpen(false)}
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="chat-msgs">
+            {messages.length === 0 && (
+              <div className="chat-welcome">
+                <div className="chat-welcome-icon">🔬</div>
+                <div className="chat-welcome-title">How can I help?</div>
+                <div className="chat-welcome-sub">
+                  Ask me about protocols, sample tracking, assay results, or neuroscience concepts.
+                </div>
+              </div>
+            )}
+            {messages.map((m, i) => (
+              <div key={i} className={`chat-msg-wrap ${m.role}`}>
+                <div className="chat-bubble-msg">{m.content}</div>
+              </div>
+            ))}
+            {loading && (
+              <div className="chat-msg-wrap assistant">
+                <div className="chat-typing-wrap">
+                  <div className="chat-dot" />
+                  <div className="chat-dot" />
+                  <div className="chat-dot" />
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="chat-err-row">
+                <span style={{ flex: 1 }}>{error}</span>
+                <button
+                  className="chat-retry-btn"
+                  onClick={() => sendMessage(null, messages)}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            <div ref={msgsEndRef} />
+          </div>
+
+          {/* Suggestions (only shown before first message) */}
+          {messages.length === 0 && (
+            <div className="chat-suggestions">
+              {CHAT_SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  className="chat-sug-btn"
+                  disabled={loading}
+                  onClick={() => sendMessage(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input */}
+          <div className="chat-foot">
+            <textarea
+              ref={inputRef}
+              className="chat-textarea"
+              rows={1}
+              placeholder="Ask about samples, protocols, assays…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKey}
+              disabled={loading}
+            />
+            <button
+              className="chat-send-btn"
+              disabled={!input.trim() || loading}
+              onClick={() => input.trim() && !loading && sendMessage(input.trim())}
+              title="Send"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle bubble */}
+      <button
+        className="chat-bubble-btn"
+        onClick={() => setOpen((o) => !o)}
+        title="NeuroLIMS AI Assistant"
+      >
+        {open ? (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        ) : (
+          "🧠"
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // ROOT
 
 // ─────────────────────────────────────────────
@@ -3395,6 +3831,8 @@ export default function NeuroLIMS() {
             <RefsPage refs={savedRefs} onRemove={handleRemove} />
           )}
         </div>
+
+        <AIChatWidget />
 
         {toast && (
           <div className="toast">
