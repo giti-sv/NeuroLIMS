@@ -316,6 +316,79 @@ async def research_papers(
     return data
 
 
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "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")
+ANTHROPIC_CHAT_SYSTEM = (
+    "You are the NeuroLIMS AI Assistant — an expert neuroscience guide and lab management assistant. "
+    "Your responses adapt to the user's declared expertise level "
+    "(1 = Undergraduate Student, 2 = Graduate Student, 3 = Postdoc Researcher, "
+    "4 = PI / Senior Scientist, 5 = Clinician). "
+    "On the very first user message, always ask for their expertise level before answering anything else, "
+    "using this exact text: "
+    "'Before we begin, what is your level of expertise in neuroscience? "
+    "1 — Undergraduate Student (new to neuroscience, needs simple explanations), "
+    "2 — Graduate Student (familiar with core concepts, some research experience), "
+    "3 — Postdoctoral Researcher (deep domain knowledge, active researcher), "
+    "4 — Principal Investigator / Senior Scientist (expert, leading research programs), "
+    "5 — Clinician / Neurology Specialist (clinical neuroscience, patient-facing context). "
+    "Please reply with a number (1–5).' "
+    "Once the user replies with a number, acknowledge their level warmly, then adapt ALL future responses: "
+    "Level 1: plain everyday language, analogies, short answers, encouraging tone, end with a fun fact or question. "
+    "Level 2: standard terminology with brief explanations of advanced terms, include mechanisms, collegial tone. "
+    "Level 3: full technical language, nuance and caveats, specific pathways/receptors/mechanisms, peer-to-peer tone. "
+    "Level 4: maximally concise and information-dense, assume mastery, focus on strategy and translational angles, direct tone. "
+    "Level 5: clinical framing, symptoms/diagnoses/treatment implications, ICD terminology where relevant, evidence-based tone. "
+    "Never ask for the level again unless the user explicitly requests a change. "
+    "If the user says 'change my level', 'switch to level X', or similar, update immediately and confirm. "
+    "You also assist with the NeuroLIMS platform: sample tracking, protocols, assay results, study management, compliance. "
+    "Apply the same expertise-level adaptation to all LIMS-related answers. "
+    "Never use markdown formatting — no headers, no bold or italic symbols, no bullet points, no dashes as list markers, "
+    "no numbered lists, no horizontal rules. Write everything as plain flowing sentences and paragraphs. "
+    "Be accurate, professional, and scientifically rigorous at all levels — just adjust how you communicate, not the quality of information."
+)
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+
+
+@app.post("/api/chat")
+async def chat(payload: ChatRequest) -> Dict[str, str]:
+    if not ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured on server")
+
+    messages = [{"role": m.role, "content": m.content} for m in payload.messages]
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": "claude-sonnet-4-6",
+                    "max_tokens": 1000,
+                    "system": ANTHROPIC_CHAT_SYSTEM,
+                    "messages": messages,
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            reply = data.get("content", [{}])[0].get("text", "No response received.")
+            return {"reply": reply}
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=502, detail=f"Anthropic API error: {e.response.status_code}")
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Chat service unavailable: {str(e)}")
+
+
 @app.get("/research/studies")
 async def research_studies(
     study_terms: str = Query(...),
