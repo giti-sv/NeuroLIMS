@@ -293,6 +293,46 @@ def get_experiments(user_email: str, db: Session = Depends(get_db)):
         }
         for e in experiments
     ]
+@app.post("/experiments")
+def save_experiment(payload: SaveExperimentRequest, db: Session = Depends(get_db)):
+    # Find user
+    user = (
+        db.query(User)
+        .filter(User.email == payload.user_email.lower())
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Create new experiment
+    exp = Experiment(
+        name=payload.name,
+        user_email=payload.user_email.lower(),
+
+        tau=payload.tau,
+        vth=payload.Vth,
+        tsim=payload.tSim,
+
+        stim_type=payload.stim.type,
+        amplitude=payload.stim.amplitude,
+        pulse_width=payload.stim.pulseWidth,
+        pulse_freq=payload.stim.pulseFreq,
+
+        gaba=payload.neuro.gaba,
+        glu=payload.neuro.glu,
+
+        total_spikes=payload.metrics.totalSpikes,
+        firing_rate_hz=payload.metrics.firingRateHz,
+        mean_vm=payload.metrics.meanVm,
+        peak_vm=payload.metrics.peakVm,
+    )
+
+    db.add(exp)
+    db.commit()
+    db.refresh(exp)
+
+    return {"message": "Experiment saved", "id": exp.id}
 
 @app.get("/research/papers")
 async def research_papers(

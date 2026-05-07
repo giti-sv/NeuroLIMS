@@ -2708,7 +2708,7 @@
     // ═══════════════════════════════════════════════════════════════
     // SIMULATION PAGE COMPONENT
     // ═══════════════════════════════════════════════════════════════
-    function SimPage() {
+    function SimPage({ user }) {
       // ── Stimulator state ──
       const [stimType, setStimType] = useState("constant");
       const [amplitude, setAmplitude] = useState(3.0);
@@ -2812,8 +2812,12 @@
         }
       };
 
-      const saveExperiment = () => {
-        if (!result) return;
+      const saveExperiment = async () => {
+        if (!result || !user) {
+          alert("Run a simulation first and make sure you are signed in.");
+          return;
+        }
+
         const colors = [
           "#c2111b",
           "#2858a8",
@@ -2824,26 +2828,118 @@
           "#b0a020",
           "#68b040",
         ];
+
         const name = `Exp ${expCounter}`;
-        const newExp = {
-          id: Date.now(),
-          name,
-          color: colors[(expCounter - 1) % colors.length],
-          params: {
-            stimType,
-            amplitude,
-            pulseWidth,
-            pulseFreq,
-            gabaMod,
-            gluMod,
-            tau,
-            Vth,
-          },
-          result,
-        };
-        setExperiments((prev) => [...prev, newExp]);
-        setExpCounter((c) => c + 1);
+
+        try {
+          const res = await fetch(`${API_BASE}/experiments`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name,
+              user_email: user.email,
+              tau,
+              Vth,
+              tSim,
+              stim: {
+                type: stimType,
+                amplitude,
+                pulseWidth,
+                pulseFreq,
+              },
+              neuro: {
+                gaba: gabaMod,
+                glu: gluMod,
+              },
+              metrics: result.metrics,
+            }),
+          });
+
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error("SAVE ERROR STATUS:", res.status);
+            console.error("SAVE ERROR BODY:", errorText);
+            throw new Error("Could not save experiment");
+          }
+
+          const saved = await res.json();
+
+          setExpCounter((c) => c + 1);
+
+          await loadExperiments(colors);
+
+          if (saved?.id) {
+            setSelExp(saved.id);
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Save failed");
+        }
       };
+      const loadExperiments = async (colorsOverride) => {
+        if (!user) return;
+
+        const colors = colorsOverride || [
+          "#c2111b",
+          "#2858a8",
+          "#58a870",
+          "#a05888",
+          "#c87840",
+          "#2a9090",
+          "#b0a020",
+          "#68b040",
+        ];
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/experiments?user_email=${encodeURIComponent(user.email)}`
+          );
+
+          if (!res.ok) {
+            throw new Error("Could not load experiments");
+          }
+
+          const data = await res.json();
+
+          const normalized = data.map((exp, i) => ({
+            ...exp,
+            color: colors[i % colors.length],
+
+            // make backend experiments look like old frontend experiments
+            params: {
+              stimType: exp.stim?.type ?? "constant",
+              amplitude: exp.stim?.amplitude ?? 0,
+              pulseWidth: exp.stim?.pulseWidth ?? 0,
+              pulseFreq: exp.stim?.pulseFreq ?? 0,
+              gabaMod: exp.neuro?.gaba ?? 0,
+              gluMod: exp.neuro?.glu ?? 0,
+              tau: exp.tau ?? 0,
+              Vth: exp.Vth ?? 0,
+            },
+
+            result: {
+              metrics: exp.metrics ?? {},
+              spikeTimes: exp.spikeTimes ?? [],
+              times: exp.times ?? [],
+              voltage: exp.voltage ?? [],
+            },
+          }));
+
+          setExperiments(normalized);
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      useEffect(() => {
+        if (user) {
+          loadExperiments();
+        } else {
+          setExperiments([]);
+          setSelExp(null);
+        }
+      }, [user]);
 
       const applyPreset = (presetName) => {
         const p = SIM_PRESETS[presetName];
@@ -3491,7 +3587,7 @@
                   onSave={handleSave}
                 />
               )}
-              {page === "sim" && <SimPage />}
+              {page === "sim" && <SimPage user={user} />}
               {page === "refs" && (
                 <RefsPage refs={savedRefs} onRemove={handleRemove} />
               )}
