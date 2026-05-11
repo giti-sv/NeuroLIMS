@@ -6,7 +6,10 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
+from dotenv import load_dotenv
 import os
+load_dotenv()
+
 
 app = FastAPI(title="NeuroLIMS Backend")
 
@@ -356,7 +359,8 @@ async def research_papers(
     return data
 
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "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")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+print("Anthropic key loaded:", bool(ANTHROPIC_API_KEY))
 ANTHROPIC_CHAT_SYSTEM = (
     "You are the NeuroLIMS AI Assistant — an expert neuroscience guide and lab management assistant. "
     "Your responses adapt to the user's declared expertise level "
