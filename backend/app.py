@@ -6,6 +6,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
+import json
 from dotenv import load_dotenv
 import os
 load_dotenv()
@@ -360,7 +361,13 @@ async def research_papers(
 
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-print("Anthropic key loaded:", bool(ANTHROPIC_API_KEY))
+print("Key loaded:", bool(ANTHROPIC_API_KEY))
+print("Key length:", len(ANTHROPIC_API_KEY or ""))
+
+for i, ch in enumerate(ANTHROPIC_API_KEY or ""):
+    if ord(ch) > 127:
+        print("NON-ASCII CHARACTER IN KEY at position:", i, repr(ch), ord(ch))
+
 ANTHROPIC_CHAT_SYSTEM = (
     "You are the NeuroLIMS AI Assistant — an expert neuroscience guide and lab management assistant. "
     "Your responses adapt to the user's declared expertise level "
@@ -409,19 +416,22 @@ async def chat(payload: ChatRequest) -> Dict[str, str]:
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
+            
+            request_body = {
+                "model": "claude-3-haiku-20240307",
+                "max_tokens": 1000,
+                "system": ANTHROPIC_CHAT_SYSTEM,
+                "messages": messages,
+                }
+
             resp = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={
                     "x-api-key": ANTHROPIC_API_KEY,
                     "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
+                    "content-type": "application/json; charset=utf-8",
                 },
-                json={
-                    "model": "claude-sonnet-4-6",
-                    "max_tokens": 1000,
-                    "system": ANTHROPIC_CHAT_SYSTEM,
-                    "messages": messages,
-                },
+                content=json.dumps(request_body, ensure_ascii=False).encode("utf-8"),
             )
             resp.raise_for_status()
             data = resp.json()
@@ -431,7 +441,20 @@ async def chat(payload: ChatRequest) -> Dict[str, str]:
             raise HTTPException(status_code=502, detail=f"Anthropic API error: {e.response.status_code}")
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Chat service unavailable: {str(e)}")
+        except httpx.HTTPStatusError as e:
+            print("ANTHROPIC STATUS:", e.response.status_code)
+            print("ANTHROPIC BODY:", e.response.text)
+            raise HTTPException(
+            status_code=502,
+            detail=f"Anthropic API error: {e.response.status_code} - {e.response.text}"
+        )
 
+        except Exception as e:
+            print("ANTHROPIC ERROR:", repr(e))
+            raise HTTPException(
+            status_code=502,
+            detail=f"Chat service unavailable: {str(e)}"
+        )
 
 @app.get("/research/studies")
 async def research_studies(

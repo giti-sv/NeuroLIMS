@@ -871,7 +871,7 @@ function AuthPage({ onAuth }) {
     try {
       const r = await mockLogin("demo@neurolims.edu", "demo1234");
       onAuth(r.user);
-    } catch {}
+    } catch { }
     setLoading(false);
   };
 
@@ -1009,8 +1009,8 @@ function AuthPage({ onAuth }) {
             {loading
               ? "⏳ Please wait…"
               : tab === "login"
-              ? "Sign In →"
-              : "Create Account →"}
+                ? "Sign In →"
+                : "Create Account →"}
           </button>
           <div className="auth-div">or</div>
           <button className="auth-demo" onClick={demo} disabled={loading}>
@@ -1190,22 +1190,21 @@ function BrainMap({ selectedRegion, onSelect }) {
       <div className="brain-legend">
         {(view === "internal"
           ? [
-              "frontal",
-              "paracentral",
-              "precuneus",
-              "cingulate",
-              "cuneus",
-              "cerebellum_int",
-            ]
-              .map((id) => REGIONS[id])
-              .filter(Boolean)
+            "frontal",
+            "paracentral",
+            "precuneus",
+            "cingulate",
+            "cuneus",
+            "cerebellum_int",
+          ]
+            .map((id) => REGIONS[id])
+            .filter(Boolean)
           : Object.values(REGIONS).filter((r) => r.views.includes("external"))
         ).map((r) => (
           <div
             key={r.id}
-            className={`legend-chip ${
-              selectedRegion === r.id ? "active-chip" : ""
-            }`}
+            className={`legend-chip ${selectedRegion === r.id ? "active-chip" : ""
+              }`}
             onClick={() => handleClick(r.id)}
           >
             <div className="legend-dot" style={{ background: r.color }} />
@@ -1928,7 +1927,7 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
         const d = await res.json();
         setStudies(d.results || []);
         setSTotal(d.meta?.count || 0);
-      } catch {}
+      } catch { }
       setSLoad(false);
     },
     [regionId, yr]
@@ -1951,22 +1950,22 @@ function ResearchPage({ regionId: initialRegionId, onBack, onSave }) {
     targetYear === null
       ? papers
       : papers.filter((p) => {
-          const y =
-            p.publication_year != null
-              ? p.publication_year
-              : parseInt(p.date?.match(/\d{4}/)?.[0], 10);
-          return y === targetYear;
-        });
+        const y =
+          p.publication_year != null
+            ? p.publication_year
+            : parseInt(p.date?.match(/\d{4}/)?.[0], 10);
+        return y === targetYear;
+      });
   const filteredStudies =
     targetYear === null
       ? studies
       : studies.filter((p) => {
-          const y =
-            p.publication_year != null
-              ? p.publication_year
-              : parseInt(p.date?.match(/\d{4}/)?.[0], 10);
-          return y === targetYear;
-        });
+        const y =
+          p.publication_year != null
+            ? p.publication_year
+            : parseInt(p.date?.match(/\d{4}/)?.[0], 10);
+        return y === targetYear;
+      });
 
   const doSearch = () => {
     setActiveKw(kw);
@@ -3003,8 +3002,8 @@ function SimPage() {
   const statusLabel = running
     ? "Simulating…"
     : result
-    ? `Done — ${result.metrics.totalSpikes} spikes`
-    : "Ready";
+      ? `Done — ${result.metrics.totalSpikes} spikes`
+      : "Ready";
 
   return (
     <div className="sim-page">
@@ -3035,9 +3034,8 @@ function SimPage() {
           </div>
           <div className="sim-type-row">
             <button
-              className={`sim-type-btn ${
-                stimType === "constant" ? "active" : ""
-              }`}
+              className={`sim-type-btn ${stimType === "constant" ? "active" : ""
+                }`}
               onClick={() => setStimType("constant")}
             >
               Constant
@@ -3513,23 +3511,18 @@ function AIChatWidget() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: CHAT_SYSTEM,
           messages: history,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const reply = data.content?.[0]?.text ?? "No response received.";
+      const reply = data.reply ?? "No response received.";
       setMessages([...history, { role: "assistant", content: reply }]);
     } catch {
       setError("Could not reach the assistant. Check your connection and try again.");
