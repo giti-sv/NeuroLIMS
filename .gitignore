@@ -71,5 +71,8 @@ backend/venv/
 .DS_Store
 backend/neurolims.db
 
+
 .env
 backend/.env
+API_Key.env
+backend/API_Key.env
