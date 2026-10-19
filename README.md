@@ -24,14 +24,14 @@ brain region, read the most-cited research on it, and model how neurons behave.
 - **Saved experiments.** Simulation parameters and results are stored per user in SQLite.
 - **AI assistant.** A chat widget backed by the Anthropic Claude API. It asks for your
   expertise level (from undergraduate to clinician) and adjusts the depth of its answers to match.
-- **User accounts.** Registration and sign-in, plus a seeded demo account.
+- **User accounts.** Registration and sign-in, with passwords hashed using PBKDF2-SHA256, plus a seeded demo account.
 
 ## Tech stack
 
 | Layer    | Technology |
 | -------- | ---------- |
 | Frontend | React 18 (single-page app, loaded from a CDN), custom CSS design system |
-| Backend  | FastAPI, Pydantic, SQLAlchemy, httpx |
+| Backend  | FastAPI, Pydantic, SQLAlchemy, httpx, Anthropic Python SDK |
 | Database | SQLite |
 | External | OpenAlex API (literature), Anthropic API (chat assistant) |
 
@@ -71,6 +71,7 @@ Create `backend/.env`:
 
 ```env
 ANTHROPIC_API_KEY=your-key-here      # optional, enables the chat assistant
+ANTHROPIC_MODEL=claude-haiku-5-5     # optional, the model the assistant uses
 OPENALEX_MAILTO=you@example.com      # optional, identifies you to OpenAlex
 ```
 
@@ -140,7 +141,7 @@ NeuroLIMS/
 
 ## Roadmap
 
-- Hash passwords (e.g. bcrypt) and add token-based sessions
+- Add token-based sessions
 - Move the API base URL into configuration
 - Persist saved references to the database
 - Add tests for the simulation model and the API

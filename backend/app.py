@@ -1,15 +1,22 @@
-from fastapi import FastAPI, Query, HTTPException, Depends
-from sqlalchemy.orm import Session
-from database import SessionLocal, init_db, User, Experiment
+import hashlib
+import hmac
+import logging
+import os
+import secrets
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, Query, HTTPException
+
+import anthropic
+import httpx
+from dotenv import load_dotenv
+from fastapi import FastAPI, Query, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import httpx
-import json
-from dotenv import load_dotenv
-import os
+from sqlalchemy.orm import Session
+
+from database import SessionLocal, init_db, User, Experiment
+
 load_dotenv()
+logger = logging.getLogger("neurolims")
 
 
 app = FastAPI(title="NeuroLIMS Backend")
@@ -27,6 +34,32 @@ MAILTO = os.getenv("OPENALEX_MAILTO", "neurolims@demo.edu")
 init_db()
 
 
+# Passwords are stored as "pbkdf2_sha256$<iterations>$<salt hex>$<hash hex>".
+PBKDF2_ITERATIONS = 600_000
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ITERATIONS)
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
+
+
+def is_hashed(stored: str) -> bool:
+    return stored.startswith("pbkdf2_sha256$")
+
+
+def verify_password(password: str, stored: str) -> bool:
+    if not is_hashed(stored):
+        # Accounts created before hashing was added still hold the plaintext;
+        # login() re-hashes them on their next successful sign-in.
+        return hmac.compare_digest(password.encode(), stored.encode())
+    _, iterations, salt_hex, digest_hex = stored.split("$")
+    digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode(), bytes.fromhex(salt_hex), int(iterations)
+    )
+    return hmac.compare_digest(digest.hex(), digest_hex)
+
+
 def seed_demo_user():
     db = SessionLocal()
     try:
@@ -35,7 +68,7 @@ def seed_demo_user():
             demo = User(
                 name="Guest",
                 email="demo@neurolims.edu",
-                password="demo1234",
+                password=hash_password("demo1234"),
             )
             db.add(demo)
             db.commit()
@@ -52,33 +85,8 @@ def get_db():
         yield db
     finally:
         db.close()
-class StimulusInput(BaseModel):
-    type: str
-    amplitude: float
-    pulseWidth: float
-    pulseFreq: float
 
-class NeuroInput(BaseModel):
-    gaba: float
-    glu: float
 
-class SimulationMetrics(BaseModel):
-    totalSpikes: int
-    firingRateHz: float
-    meanVm: float
-    peakVm: float    
-           
-class SaveExperimentRequest(BaseModel):
-    name: str
-    user_email: str
-    tau: float
-    Vth: float
-    tSim: float
-    stim: StimulusInput
-    neuro: NeuroInput
-    metrics: SimulationMetrics
-    
-    
 class AuthRequest(BaseModel):
     email: str
     password: str
@@ -129,9 +137,15 @@ class SimulationResult(BaseModel):
     metrics: SimulationMetrics
 
 
-USERS: List[Dict[str, str]] = [
-    {"name": "Guest", "email": "demo@neurolims.edu", "password": "demo1234"}
-]
+class SaveExperimentRequest(BaseModel):
+    name: str
+    user_email: str
+    tau: float
+    Vth: float
+    tSim: float
+    stim: StimulusInput
+    neuro: NeuroInput
+    metrics: SimulationMetrics
 
 
 def lif_simulation(payload: SimulationInput) -> Dict[str, Any]:
@@ -227,14 +241,14 @@ def health() -> Dict[str, str]:
 
 @app.post("/auth/login", response_model=UserResponse)
 def login(payload: AuthRequest, db: Session = Depends(get_db)) -> Dict[str, str]:
-    user = (
-        db.query(User)
-        .filter(User.email == payload.email.lower(), User.password == payload.password)
-        .first()
-    )
+    user = db.query(User).filter(User.email == payload.email.lower()).first()
 
-    if not user:
+    if not user or not verify_password(payload.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not is_hashed(user.password):
+        user.password = hash_password(payload.password)
+        db.commit()
 
     return {"name": user.name, "email": user.email}
 
@@ -248,7 +262,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> Dict[st
     new_user = User(
         name=payload.name,
         email=payload.email.lower(),
-        password=payload.password,
+        password=hash_password(payload.password),
     )
     db.add(new_user)
     db.commit()
@@ -361,19 +375,15 @@ async def research_papers(
 
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-print("Key loaded:", bool(ANTHROPIC_API_KEY))
-print("Key length:", len(ANTHROPIC_API_KEY or ""))
-
-for i, ch in enumerate(ANTHROPIC_API_KEY or ""):
-    if ord(ch) > 127:
-        print("NON-ASCII CHARACTER IN KEY at position:", i, repr(ch), ord(ch))
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5")
+anthropic_client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 ANTHROPIC_CHAT_SYSTEM = (
     "You are the NeuroLIMS AI Assistant — an expert neuroscience guide and lab management assistant. "
     "Your responses adapt to the user's declared expertise level "
     "(1 = Undergraduate Student, 2 = Graduate Student, 3 = Postdoc Researcher, "
     "4 = PI / Senior Scientist, 5 = Clinician). "
-    "On the very first user message, always ask for their expertise level before answering anything else, "
+    "If the user has not yet told you their expertise level, ask for it before answering anything else, "
     "using this exact text: "
     "'Before we begin, what is your level of expertise in neuroscience? "
     "1 — Undergraduate Student (new to neuroscience, needs simple explanations), "
@@ -409,52 +419,47 @@ class ChatRequest(BaseModel):
 
 @app.post("/api/chat")
 async def chat(payload: ChatRequest) -> Dict[str, str]:
-    if not ANTHROPIC_API_KEY:
+    if anthropic_client is None:
         raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured on server")
 
-    messages = [{"role": m.role, "content": m.content} for m in payload.messages]
+    # The widget opens with its own greeting (the expertise question), but the
+    # Messages API expects the conversation to start with a user turn. Move any
+    # leading assistant text into the system prompt, and merge consecutive turns
+    # from the same role.
+    system = ANTHROPIC_CHAT_SYSTEM
+    messages: List[Dict[str, str]] = []
+    for m in payload.messages:
+        if not messages and m.role == "assistant":
+            system += f" The chat widget has already shown the user this message: '{m.content}'"
+        elif messages and messages[-1]["role"] == m.role:
+            messages[-1]["content"] += "\n\n" + m.content
+        else:
+            messages.append({"role": m.role, "content": m.content})
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        try:
-            
-            request_body = {
-                "model": "claude-3-haiku-20240307",
-                "max_tokens": 1000,
-                "system": ANTHROPIC_CHAT_SYSTEM,
-                "messages": messages,
-                }
+    if not messages:
+        raise HTTPException(status_code=400, detail="No user message to answer")
 
-            resp = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": ANTHROPIC_API_KEY,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json; charset=utf-8",
-                },
-                content=json.dumps(request_body, ensure_ascii=False).encode("utf-8"),
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            reply = data.get("content", [{}])[0].get("text", "No response received.")
-            return {"reply": reply}
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=502, detail=f"Anthropic API error: {e.response.status_code}")
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"Chat service unavailable: {str(e)}")
-        except httpx.HTTPStatusError as e:
-            print("ANTHROPIC STATUS:", e.response.status_code)
-            print("ANTHROPIC BODY:", e.response.text)
-            raise HTTPException(
-            status_code=502,
-            detail=f"Anthropic API error: {e.response.status_code} - {e.response.text}"
+    try:
+        response = await anthropic_client.messages.create(
+            model=ANTHROPIC_MODEL,
+            max_tokens=16000,
+            system=system,
+            messages=messages,
+            output_config={"effort": "low"},
         )
+    except anthropic.APIStatusError as e:
+        logger.error("Anthropic API error %s (request %s): %s", e.status_code, e.request_id, e.message)
+        raise HTTPException(status_code=502, detail=f"Anthropic API error: {e.status_code}")
+    except anthropic.APIConnectionError:
+        logger.exception("Could not reach the Anthropic API")
+        raise HTTPException(status_code=502, detail="Chat service unavailable")
 
-        except Exception as e:
-            print("ANTHROPIC ERROR:", repr(e))
-            raise HTTPException(
-            status_code=502,
-            detail=f"Chat service unavailable: {str(e)}"
-        )
+    if response.stop_reason == "refusal":
+        return {"reply": "Sorry, I can't help with that request. Feel free to ask me something else about neuroscience."}
+
+    reply = "".join(block.text for block in response.content if block.type == "text")
+    return {"reply": reply or "No response received."}
+
 
 @app.get("/research/studies")
 async def research_studies(
